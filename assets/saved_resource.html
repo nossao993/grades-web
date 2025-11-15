@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<!-- saved from url=(0024)https://map.getgrade.ru/ -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <title>Карта зарплат IT в России</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <script src="./mapbox-gl.js"></script>
+    <link href="./mapbox-gl.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+        .marker {
+            cursor: pointer;
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+        .marker:hover {
+            transform: scale(1.1);
+        }
+        .marker-label {
+            position: absolute;
+            white-space: nowrap;
+            pointer-events: none;
+            font-family: 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            transition: opacity 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .marker-label.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .marker-label-city {
+            font-size: 16px;
+            font-weight: 500;
+            margin: 0 0 4px 0;
+            line-height: 1;
+        }
+        .marker-label-salary {
+            font-size: 12px;
+            font-weight: 400;
+            margin: 0;
+            line-height: 1;
+        }
+        .mapboxgl-popup-content {
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-width: 280px;
+            border-radius: 12px;
+        }
+        .popup-header {
+            background: #EFF0F2;
+            padding: 16px 20px;
+            border-radius: 12px 12px 0 0;
+        }
+        .popup-city {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0D0D0D;
+            margin: 0 0 6px 0;
+        }
+        .popup-salary {
+            font-size: 28px;
+            font-weight: 800;
+            color: #0D0D0D;
+            margin: 0;
+        }
+        .popup-count {
+            font-size: 12px;
+            color: #0D0D0D;
+            opacity: 0.6;
+            margin-top: 4px;
+        }
+        .popup-body {
+            padding: 16px 20px;
+        }
+        .popup-section {
+            margin-bottom: 16px;
+        }
+        .popup-section:last-child {
+            margin-bottom: 0;
+        }
+        .popup-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .popup-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .popup-tag {
+            background: #f0f3f7;
+            color: #2c3e50;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .popup-companies {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .popup-company {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .popup-company-logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: #f0f3f7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: #667eea;
+            flex-shrink: 0;
+            object-fit: contain;
+            padding: 2px;
+        }
+        .popup-company-logo-text {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: #f0f3f7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: #667eea;
+            flex-shrink: 0;
+        }
+        .popup-company-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            position: absolute;
+            bottom: 30px;
+            right: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1;
+        }
+        .legend h4 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+        }
+        .legend-item {
+            margin: 5px 0;
+            font-size: 12px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1;
+            max-width: 280px;
+        }
+        .header-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 0 0 4px 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .header-subtitle {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .footer {
+            position: absolute;
+            bottom: 40px;
+            left: 20px;
+            z-index: 1;
+            background: #EFF0F2;
+            padding: 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .footer-logo {
+            width: 32px;
+            height: 32px;
+            display: block;
+        }
+        .footer a {
+            font-size: 14px;
+            text-decoration: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            transition: opacity 0.2s;
+         }
+        .footer a:visited {
+            color: inherit;  
+        }
+        .footer a:hover {
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+<div class="footer">
+    <a href="http://t.me/gradesTrackerBot" target="_blank">
+        <img src="./grades_logo_site_6e05603f0e.svg" alt="Grades" class="footer-logo">
+    </a>
+</div>
+<div id="map" class="mapboxgl-map"><div class="mapboxgl-canary" style="visibility: hidden;"></div><div class="mapboxgl-canvas-container mapboxgl-interactive mapboxgl-touch-drag-pan mapboxgl-touch-zoom-rotate"><canvas class="mapboxgl-canvas" tabindex="0" aria-label="Map" role="region" width="2104" height="800" style="width: 1052px; height: 400px;"></canvas><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(448px, 129px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 41.4664px; height: 41.4664px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 41.4664px 4.14664px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 30.7332px; top: 50%; transform: translateY(-50%); display: flex;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Москва</div><div class="marker-label-salary" style="color: #B0B0B0;">280 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(420px, 77px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 28.6882px; height: 28.6882px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 28.6882px 2.86882px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 24.3441px; top: 50%; transform: translateY(-50%); display: flex;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Санкт-Петербург</div><div class="marker-label-salary" style="color: #B0B0B0;">107 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(575px, 446px) translate(-50%, -50%) translate(0px, 0px);"><div class="marker" style="width: 10.8284px; height: 10.8284px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 10.8284px 1.08284px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.4142px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Dubai</div><div class="marker-label-salary" style="color: #B0B0B0;">2 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(728px, 235px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 12.899px; height: 12.899px; background-color: rgb(0, 172, 193); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 172, 193) 0px 0px 12.899px 1.2899px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 16.4495px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Алматы</div><div class="marker-label-salary" style="color: #B0B0B0;">6 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(483px, 291px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 12px; height: 12px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 12px 1.2px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 16px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Тбилиси</div><div class="marker-label-salary" style="color: #B0B0B0;">4 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(681px, 275px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 10.8284px; height: 10.8284px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 10.8284px 1.08284px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.4142px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Ташкент</div><div class="marker-label-salary" style="color: #B0B0B0;">2 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(384px, 136px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 11.4641px; height: 11.4641px; background-color: rgb(204, 247, 255); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(204, 247, 255) 0px 0px 11.4641px 1.14641px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.7321px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Минск</div><div class="marker-label-salary" style="color: #B0B0B0;">3 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(479px, 307px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 10.8284px; height: 10.8284px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 10.8284px 1.08284px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.4142px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Ереван</div><div class="marker-label-salary" style="color: #B0B0B0;">2 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(619px, 111px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 10.8284px; height: 10.8284px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 10.8284px 1.08284px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.4142px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Тюмень</div><div class="marker-label-salary" style="color: #B0B0B0;">2 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(669px, 123px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 11.4641px; height: 11.4641px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 11.4641px 1.14641px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.7321px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Омск</div><div class="marker-label-salary" style="color: #B0B0B0;">3 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(350px, 114px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 11.4641px; height: 11.4641px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 11.4641px 1.14641px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.7321px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Калининград</div><div class="marker-label-salary" style="color: #B0B0B0;">3 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(451px, 176px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 14.6332px; height: 14.6332px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 14.6332px 1.46332px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 17.3166px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Воронеж</div><div class="marker-label-salary" style="color: #B0B0B0;">11 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(485px, 213px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 12px; height: 12px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 12px 1.2px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 16px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Волгоград</div><div class="marker-label-salary" style="color: #B0B0B0;">4 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(546px, 122px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 12px; height: 12px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 12px 1.2px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 16px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Ижевск</div><div class="marker-label-salary" style="color: #B0B0B0;">4 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(591px, 119px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 17.798px; height: 17.798px; background-color: rgb(0, 172, 193); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 172, 193) 0px 0px 17.798px 1.7798px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 18.899px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Екатеринбург</div><div class="marker-label-salary" style="color: #B0B0B0;">24 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(520px, 135px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 16px; height: 16px; background-color: rgb(204, 247, 255); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(204, 247, 255) 0px 0px 16px 1.6px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 18px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Казань</div><div class="marker-label-salary" style="color: #B0B0B0;">16 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(524px, 104px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 11.4641px; height: 11.4641px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 11.4641px 1.14641px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.7321px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Киров</div><div class="marker-label-salary" style="color: #B0B0B0;">3 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(439px, 249px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 12.899px; height: 12.899px; background-color: rgb(0, 172, 193); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 172, 193) 0px 0px 12.899px 1.2899px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 16.4495px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Краснодар</div><div class="marker-label-salary" style="color: #B0B0B0;">6 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(749px, 71px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 12px; height: 12px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 12px 1.2px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 16px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Красноярск</div><div class="marker-label-salary" style="color: #B0B0B0;">4 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(489px, 128px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 14.9282px; height: 14.9282px; background-color: rgb(0, 172, 193); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 172, 193) 0px 0px 14.9282px 1.49282px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 17.4641px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Нижний Новгород</div><div class="marker-label-salary" style="color: #B0B0B0;">12 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(716px, 104px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 16.9443px; height: 16.9443px; background-color: rgb(77, 208, 225); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(77, 208, 225) 0px 0px 16.9443px 1.69443px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 18.4721px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Новосибирск</div><div class="marker-label-salary" style="color: #B0B0B0;">20 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(563px, 109px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 12.4721px; height: 12.4721px; background-color: rgb(77, 208, 225); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(77, 208, 225) 0px 0px 12.4721px 1.24721px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 16.2361px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Пермь</div><div class="marker-label-salary" style="color: #B0B0B0;">5 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(448px, 226px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 13.6569px; height: 13.6569px; background-color: rgb(77, 208, 225); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(77, 208, 225) 0px 0px 13.6569px 1.36569px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 16.8284px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Ростов-на-Дону</div><div class="marker-label-salary" style="color: #B0B0B0;">8 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(527px, 164px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 12.899px; height: 12.899px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 12.899px 1.2899px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 16.4495px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Самара</div><div class="marker-label-salary" style="color: #B0B0B0;">6 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(717px, 85px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 12.4721px; height: 12.4721px; background-color: rgb(77, 208, 225); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(77, 208, 225) 0px 0px 12.4721px 1.24721px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 16.2361px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Томск</div><div class="marker-label-salary" style="color: #B0B0B0;">5 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(515px, 151px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 12px; height: 12px; background-color: rgb(204, 247, 255); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(204, 247, 255) 0px 0px 12px 1.2px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 16px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Ульяновск</div><div class="marker-label-salary" style="color: #B0B0B0;">4 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(565px, 145px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 12.899px; height: 12.899px; background-color: rgb(204, 247, 255); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(204, 247, 255) 0px 0px 12.899px 1.2899px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 16.4495px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Уфа</div><div class="marker-label-salary" style="color: #B0B0B0;">6 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(509px, 130px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 10.8284px; height: 10.8284px; background-color: rgb(0, 96, 100); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(0, 96, 100) 0px 0px 10.8284px 1.08284px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.4142px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Чебоксары</div><div class="marker-label-salary" style="color: #B0B0B0;">2 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(466px, 111px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 10.8284px; height: 10.8284px; background-color: rgb(77, 208, 225); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(77, 208, 225) 0px 0px 10.8284px 1.08284px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.4142px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Ярославль</div><div class="marker-label-salary" style="color: #B0B0B0;">2 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(423px, 153px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 10.8284px; height: 10.8284px; background-color: rgb(204, 247, 255); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(204, 247, 255) 0px 0px 10.8284px 1.08284px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.4142px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Брянск</div><div class="marker-label-salary" style="color: #B0B0B0;">2 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(852px, 38px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 10.8284px; height: 10.8284px; background-color: rgb(204, 247, 255); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(204, 247, 255) 0px 0px 10.8284px 1.08284px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.4142px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Владивосток</div><div class="marker-label-salary" style="color: #B0B0B0;">2 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(455px, 166px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 10.8284px; height: 10.8284px; background-color: rgb(204, 247, 255); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(204, 247, 255) 0px 0px 10.8284px 1.08284px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.4142px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Липецк</div><div class="marker-label-salary" style="color: #B0B0B0;">2 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(459px, 143px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 11.4641px; height: 11.4641px; background-color: rgb(204, 247, 255); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(204, 247, 255) 0px 0px 11.4641px 1.14641px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.7321px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Рязань</div><div class="marker-label-salary" style="color: #B0B0B0;">3 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(498px, 181px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 10.8284px; height: 10.8284px; background-color: rgb(77, 208, 225); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(77, 208, 225) 0px 0px 10.8284px 1.08284px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.4142px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Саратов</div><div class="marker-label-salary" style="color: #B0B0B0;">2 зарплат</div></div></div><div aria-label="Map marker" class="mapboxgl-marker mapboxgl-marker-anchor-center" role="button" tabindex="0" aria-expanded="false" style="position: relative; width: 0px; height: 0px; transform: translate(462px, 252px) translate(-50%, -50%) translate(0px, 0px); opacity: 1; pointer-events: auto;"><div class="marker" style="width: 11.4641px; height: 11.4641px; background-color: rgb(204, 247, 255); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-shadow: rgb(204, 247, 255) 0px 0px 11.4641px 1.14641px, rgba(0, 0, 0, 0.3) 0px 2px 8px;"></div><div class="marker-label" style="left: 15.7321px; top: 50%; transform: translateY(-50%); display: none;"><div class="marker-label-city" style="color: #FFFFFF; text-shadow: none;">Ставрополь</div><div class="marker-label-salary" style="color: #B0B0B0;">3 зарплат</div></div></div></div><div class="mapboxgl-control-container"><div class="mapboxgl-ctrl-top-left"></div><div class="mapboxgl-ctrl-top-right"></div><div class="mapboxgl-ctrl-bottom-left"><div class="mapboxgl-ctrl" style="display: block;"><a class="mapboxgl-ctrl-logo" target="_blank" rel="noopener nofollow" href="https://www.mapbox.com/" aria-label="Mapbox logo"></a></div></div><div class="mapboxgl-ctrl-bottom-right"><div class="mapboxgl-ctrl mapboxgl-ctrl-attrib"><button class="mapboxgl-ctrl-attrib-button" type="button" aria-label="Toggle attribution"><span class="mapboxgl-ctrl-icon" aria-hidden="true" title="Toggle attribution"></span></button><div class="mapboxgl-ctrl-attrib-inner" role="list"><a href="https://www.mapbox.com/about/maps" target="_blank" title="Mapbox" aria-label="Mapbox">© Mapbox</a> <a href="https://www.openstreetmap.org/copyright/" target="_blank" title="OpenStreetMap" aria-label="OpenStreetMap">© OpenStreetMap</a> <a class="mapbox-improve-map" href="https://apps.mapbox.com/feedback/?owner=mapbox&amp;id=dark-v11&amp;access_token=pk.eyJ1Ijoic2Fmb25vdnYiLCJhIjoiY21ncDd2aTRrMjRwMzJscXFzbWhnaWQyYiJ9.Ogjdume21vx8fFymDc9L-A#/50/50/2.5" target="_blank" aria-label="Map feedback" rel="noopener nofollow">Improve this map</a></div></div></div></div></div>
+<div class="legend">
+    <h4>Медианная зарплата</h4>
+    <div class="legend-item"><span class="legend-color" style="background:#CCF7FF"></span>&lt; 200K</div>
+    <div class="legend-item"><span class="legend-color" style="background:#4DD0E1"></span>200-250K</div>
+    <div class="legend-item"><span class="legend-color" style="background:#00ACC1"></span>250-300K</div>
+    <div class="legend-item"><span class="legend-color" style="background:#006064"></span>&gt; 300K</div>
+</div>
+
+<script>
+mapboxgl.accessToken = 'pk.eyJ1Ijoic2Fmb25vdnYiLCJhIjoiY21ncDd2aTRrMjRwMzJscXFzbWhnaWQyYiJ9.Ogjdume21vx8fFymDc9L-A';
+
+var hour = new Date().getHours();
+var isDark = hour >= 20 || hour < 6;
+var mapStyle = isDark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11';
+
+var cities = [
+    {name: 'Москва', salary: 307500, count: 280, lng: 37.6173, lat: 55.7558,
+     stacks: ['react', 'DevOps', 'Java Backend'],
+     companies: ['VK', 'Яндекс', 'Сбер']},
+    {name: 'Санкт-Петербург', salary: 300000, count: 107, lng: 30.3351, lat: 59.9343,
+     stacks: ['mobile (iOS, Android)', 'DevOps', 'Java Backend'],
+     companies: ['Яндекс', 'Т-Банк', 'VK']},
+    {name: 'Dubai', salary: 660000, count: 2, lng: 55.2708, lat: 25.2048,
+     stacks: ['бэкенд', 'mobile (iOS, Android)'],
+     companies: ['Careem', 'Sports.ru']},
+    {name: 'Алматы', salary: 292000, count: 6, lng: 76.8512, lat: 43.2220,
+     stacks: ['Java Backend', 'mobile (iOS, Android)', 'Oracle'],
+     companies: ['Aviata', 'Freedom finance', 'Halyk Bank']},
+    {name: 'Тбилиси', salary: 439000, count: 4, lng: 44.8337, lat: 41.7151,
+     stacks: ['Java Backend', 'react', 'next', 'backend'],
+     companies: ['PwC', 'Vizyoneks']},
+    {name: 'Ташкент', salary: 335000, count: 2, lng: 69.2401, lat: 41.2995,
+     stacks: ['backend', 'frontend'],
+     companies: ['Т-Банк', 'Uzum']},
+    {name: 'Минск', salary: 160000, count: 3, lng: 27.5615, lat: 53.9006,
+     stacks: ['DevOps', 'react', 'next'],
+     companies: ['Burger King', 'Itransition', 'Modsen']},
+    {name: 'Ереван', salary: 561000, count: 2, lng: 44.5152, lat: 40.1872,
+     stacks: ['CPU', 'Java Backend'],
+     companies: ['Syntacore']},
+    {name: 'Тюмень', salary: 430750, count: 2, lng: 65.5272, lat: 57.1522,
+     stacks: ['backend', 'Full Stack'],
+     companies: ['Авито', 'OIS']},
+    {name: 'Омск', salary: 416000, count: 3, lng: 73.3686, lat: 54.9885,
+     stacks: ['backend', 'DevOps', 'Java Backend'],
+     companies: ['ГК Иннотех', 'Райффайзен Банк', 'Magnit']},
+    {name: 'Калининград', salary: 420000, count: 3, lng: 20.4522, lat: 54.7104,
+     stacks: ['Микросервисная архитектура', 'Vue js', 'Web/mobile'],
+     companies: ['ITSpecial', 'Ozon Tech', 'RIS']},
+    {name: 'Воронеж', salary: 350000, count: 11, lng: 39.2003, lat: 51.6720,
+     stacks: ['Next js', 'react', 'Java Backend'],
+     companies: ['Сбер', 'Совкомбанк Технологии', 'Т-Банк']},
+    {name: 'Волгоград', salary: 371500, count: 4, lng: 44.5133, lat: 48.7080,
+     stacks: ['ASP.NET Core', 'backend', 'DevOps'],
+     companies: ['ПочтаТех', 'Т-Банк', 'Artsofte']},
+    {name: 'Ижевск', salary: 360000, count: 4, lng: 53.2001, lat: 56.8498,
+     stacks: ['Java Backend', 'mobile (iOS, Android)', 'react'],
+     companies: ['Банк ПСБ', 'ВТБ', 'icons8']},
+    {name: 'Екатеринбург', salary: 255000, count: 24, lng: 60.6122, lat: 56.8389,
+     stacks: ['Web', 'Java Backend', 'react'],
+     companies: ['АО "ПФ "СКБ КОНТУР"', 'БАНК РОССИИ', 'Т-Банк']},
+    {name: 'Казань', salary: 190000, count: 16, lng: 49.1221, lat: 55.7887,
+     stacks: ['Web/mobile', 'DevOps', 'Java Backend'],
+     companies: ['Иксон Девелопмент', 'Лаборатория измерительных систем', 'Промэнерго']},
+    {name: 'Киров', salary: 320000, count: 3, lng: 49.6601, lat: 58.6035,
+     stacks: ['Java Backend', 'Node.js', 'react'],
+     companies: ['Бэлл Интегратор', 'Философт', 'sol tech']},
+    {name: 'Краснодар', salary: 295000, count: 6, lng: 38.9769, lat: 45.0355,
+     stacks: ['Oracle', 'Vue js', 'Java Backend'],
+     companies: ['ЖилфондСервис', 'Клерк.ру', 'SM Lab']},
+    {name: 'Красноярск', salary: 300000, count: 4, lng: 92.8672, lat: 56.0153,
+     stacks: ['1С', 'Python', 'Web'],
+     companies: ['ООО Континент', 'Полюс', 'Tevian']},
+    {name: 'Нижний Новгород', salary: 272500, count: 12, lng: 44.0020, lat: 56.2965,
+     stacks: ['Go', 'API', 'backend'],
+     companies: ['Т-Банк', 'telerion', 'YADRO']},
+    {name: 'Новосибирск', salary: 240000, count: 20, lng: 82.9346, lat: 55.0084,
+     stacks: ['Web', 'DevOps', 'Java Backend'],
+     companies: ['Wildberries', 'X5 Group', 'ЦФТ']},
+    {name: 'Пермь', salary: 220000, count: 5, lng: 56.2502, lat: 58.0105,
+     stacks: ['Linux', 'Python', 'Java Backend'],
+     companies: ['Газпромбанк', 'Норбит', 'РТМИС']},
+    {name: 'Ростов-на-Дону', salary: 210000, count: 8, lng: 39.7233, lat: 47.2357,
+     stacks: ['Angular', 'Python', 'react'],
+     companies: ['НПЦ КОСМОС2', 'Лемана ПРО', 'Axenix']},
+    {name: 'Самара', salary: 316000, count: 6, lng: 50.1155, lat: 53.1952,
+     stacks: ['C++', 'Java Backend', 'Node.js'],
+     companies: ['Мой Офис', 'МТС финтех', 'Clickgroup']},
+    {name: 'Томск', salary: 230000, count: 5, lng: 84.9480, lat: 56.4977,
+     stacks: ['frontend', 'Web', 'backend'],
+     companies: ['Aurigma', 'Quantumsoft', 'Softline']},
+    {name: 'Ульяновск', salary: 190000, count: 4, lng: 48.3866, lat: 54.3142,
+     stacks: ['backend', 'Java Backend', 'spring boot'],
+     companies: ['Дион Софт', 'IRLIX', 'MediaSoft']},
+    {name: 'Уфа', salary: 92500, count: 6, lng: 55.9678, lat: 54.7388,
+     stacks: ['backend', 'C#', 'Web'],
+     companies: ['Газпром-нефть ЦР', 'ГК БИТ', 'ООО Викад']},
+    {name: 'Чебоксары', salary: 310000, count: 2, lng: 47.2486, lat: 56.1439,
+     stacks: ['Golang', 'react'],
+     companies: ['Иннотех', 'OZON']},
+    {name: 'Ярославль', salary: 207500, count: 2, lng: 39.8845, lat: 57.6263,
+     stacks: ['1С', 'full stack'],
+     companies: ['Газпром-нефть ЦР', 'Areal']},
+    {name: 'Брянск', salary: 105000, count: 2, lng: 34.3640, lat: 53.2521,
+     stacks: ['backend', 'Java Backend'],
+     companies: ['Кликмедиа', 'Сбербанк']},
+    {name: 'Владивосток', salary: 162000, count: 2, lng: 131.8736, lat: 43.1056,
+     stacks: ['Микросервисная архитектура', 'backend'],
+     companies: ['РТК ИТб', 'DNS']},
+    {name: 'Липецк', salary: 185000, count: 2, lng: 39.5705, lat: 52.6031,
+     stacks: [],
+     companies: []},
+    {name: 'Рязань', salary: 110000, count: 3, lng: 39.7129, lat: 54.6269,
+     stacks: ['1С', 'backend', 'Vue js'],
+     companies: ['Айтигро', 'ГК Автоимпорт', 'ООО НПП Тепловодохран']},
+    {name: 'Саратов', salary: 220000, count: 2, lng: 46.0086, lat: 51.5924,
+     stacks: ['Java Backend', 'react'],
+     companies: ['Совкомбанк Технологии', 'X5 tech']},
+    {name: 'Ставрополь', salary: 160000, count: 3, lng: 41.9734, lat: 45.0428,
+     stacks: ['frontend', 'Java Backend', 'SwiftUI'],
+     companies: ['Инфоком-С', 'Aezakmi group', 'Softline']}
+];
+
+function getColor(salary) {
+    if (salary < 200000) return '#CCF7FF';
+    if (salary < 250000) return '#4DD0E1';
+    if (salary < 300000) return '#00ACC1';
+    return '#006064';
+}
+
+function getSize(count) {
+    return Math.sqrt(count) * 2 + 8;
+}
+
+function getCompanyInitials(name) {
+    var words = name.split(' ');
+    if (words.length >= 2) {
+        return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+}
+
+function getCompanyLogo(name) {
+    var logos = {
+        'Сбер': 'https://api.getgrade.ru/uploads/sber_logo_ea734c50d4.png',
+        'Яндекс': 'https://api.getgrade.ru/uploads/Yandex_icon_769222a81d.png',
+        'VK': 'https://api.getgrade.ru/uploads/VK_Logo_33_606560bbb0.png',
+        'Т-Банк': 'https://api.getgrade.ru/uploads/tbanklogo_6219ad61df.png',
+        'СКБ Контур': 'https://api.getgrade.ru/uploads/skbcontur_5a7c5bdd19.png',
+        'ЦФТ': 'https://api.getgrade.ru/uploads/cft_39e01a438e.jpg',
+        'БФТ': 'https://api.getgrade.ru/uploads/bft_0b8d60ed1c.png',
+        'Дром': 'https://api.getgrade.ru/uploads/drom_3515a7244e.png',
+        'Ozon Tech': 'https://api.getgrade.ru/uploads/images_21_9919e5716e.png',
+        'YADRO': 'https://api.getgrade.ru/uploads/yadro_logo_sq_2b7961814a.png',
+        'Иннотех': 'https://api.getgrade.ru/uploads/innotech_64c9de037e.png',
+        'Газпромбанк': 'https://api.getgrade.ru/uploads/images_30_9126efdf9a.png',
+        'Авито': 'https://api.getgrade.ru/uploads/avitologo_316dc7c1d6.png',
+        'Wildberries': 'https://api.getgrade.ru/uploads/images_10_7e80979388.jpeg',
+        'Лаборатория Касперского': 'https://api.getgrade.ru/uploads/kasp_13557e26a0.png',
+        'Мой Офис': 'https://api.getgrade.ru/uploads/sber_logo_ea734c50d4.png',
+        'МТС финтех': 'https://api.getgrade.ru/uploads/sber_logo_ea734c50d4.png'
+    };
+    
+    return logos[name] || null;
+}
+
+map = new mapboxgl.Map({
+    container: 'map',
+    style: mapStyle,
+    center: [50, 50],
+    zoom: 2.5
+});
+
+map.on('load', function() {
+    var topTwoCities = ['Москва', 'Санкт-Петербург'];
+    var topFiveCities = ['Москва', 'Санкт-Петербург', 'Dubai', 'Тбилиси', 'Тюмень'];
+    
+    var textColor = isDark ? '#FFFFFF' : '#0D0D0D';
+    var subtextColor = isDark ? '#B0B0B0' : '#7f8c8d';
+    var titleTextShadow = isDark ? 'none' : '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff, -1px 0 0 #fff, 1px 0 0 #fff';
+    
+    // Устанавливаем цвет для футера (убираем, так как теперь только лого)
+    
+    cities.forEach(function(city) {
+        var container = document.createElement('div');
+        container.style.position = 'relative';
+        container.style.width = '0px';
+        container.style.height = '0px';
+        
+        var el = document.createElement('div');
+        el.className = 'marker';
+        var size = getSize(city.count);
+        var color = getColor(city.salary);
+        el.style.width = size + 'px';
+        el.style.height = size + 'px';
+        el.style.backgroundColor = color;
+        el.style.position = 'absolute';
+        el.style.left = '50%';
+        el.style.top = '50%';
+        el.style.transform = 'translate(-50%, -50%)';
+        el.style.boxShadow = '0 0 ' + size + 'px ' + (size / 10) + 'px ' + color + ', 0 2px 8px rgba(0,0,0,0.3)';
+        
+        container.appendChild(el);
+        
+        var label = document.createElement('div');
+        label.className = 'marker-label';
+        label.style.left = (size / 2 + 10) + 'px';
+        label.style.top = '50%';
+        label.style.transform = 'translateY(-50%)';
+        label.innerHTML = 
+            '<div class="marker-label-city" style="color: ' + textColor + '; text-shadow: ' + titleTextShadow + ';">' + city.name + '</div>' +
+            '<div class="marker-label-salary" style="color: ' + subtextColor + ';">' + city.count + ' зарплат' + '</div>';
+        container.appendChild(label);
+        
+        var stacksHTML = city.stacks.map(function(stack) {
+            return '<span class="popup-tag">' + stack + '</span>';
+        }).join('');
+        
+        var companiesHTML = city.companies.map(function(company) {
+            var logo = getCompanyLogo(company);
+            var logoHTML;
+            
+            if (logo) {
+                logoHTML = '<img src="' + logo + '" class="popup-company-logo" alt="' + company + '" ' +
+                    'onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';">' +
+                    '<div class="popup-company-logo-text" style="display:none;">' + getCompanyInitials(company) + '</div>';
+            } else {
+                logoHTML = '<div class="popup-company-logo-text">' + getCompanyInitials(company) + '</div>';
+            }
+            
+            return '<div class="popup-company">' +
+                logoHTML +
+                '<div class="popup-company-name">' + company + '</div>' +
+                '</div>';
+        }).join('');
+        
+        var popup = new mapboxgl.Popup({ 
+            offset: 25,
+            closeButton: false,
+            maxWidth: '320px'
+        }).setHTML(
+            '<div class="popup-header">' +
+                '<div class="popup-city">' + city.name + '</div>' +
+                '<div class="popup-salary">' + city.salary.toLocaleString('ru-RU') + ' ₽</div>' +
+                '<div class="popup-count">На основе ' + city.count + ' записей</div>' +
+            '</div>' +
+            '<div class="popup-body">' +
+                '<div class="popup-section">' +
+                    '<div class="popup-section-title">Топ специализации</div>' +
+                    '<div class="popup-tags">' + stacksHTML + '</div>' +
+                '</div>' +
+                '<div class="popup-section">' +
+                    '<div class="popup-section-title">Топ работодатели</div>' +
+                    '<div class="popup-companies">' + companiesHTML + '</div>' +
+                '</div>' +
+            '</div>'
+        );
+        
+        var marker = new mapboxgl.Marker(container)
+            .setLngLat([city.lng, city.lat])
+            .setPopup(popup)
+            .addTo(map);
+        
+        var labelEl = container.querySelector('.marker-label');
+        
+        popup.on('open', function() {
+            if (labelEl) labelEl.classList.add('hidden');
+        });
+        
+        popup.on('close', function() {
+            if (labelEl) labelEl.classList.remove('hidden');
+        });
+    });
+    
+    function updateLabelsVisibility() {
+        var zoom = map.getZoom();
+        
+        cities.forEach(function(city) {
+            var cityName = city.name;
+            var markers = document.querySelectorAll('.marker-label');
+            
+            markers.forEach(function(label) {
+                var labelCity = label.querySelector('.marker-label-city').textContent;
+                
+                if (zoom < 3) {
+                    if (topTwoCities.indexOf(labelCity) !== -1) {
+                        label.style.display = 'flex';
+                    } else {
+                        label.style.display = 'none';
+                    }
+                } else if (zoom >= 3 && zoom < 4) {
+                    if (topFiveCities.indexOf(labelCity) !== -1) {
+                        label.style.display = 'flex';
+                    } else {
+                        label.style.display = 'none';
+                    }
+                } else {
+                    label.style.display = 'flex';
+                }
+            });
+        });
+    }
+    
+    updateLabelsVisibility();
+    
+    map.on('zoomend', updateLabelsVisibility);
+    map.on('zoom', updateLabelsVisibility);
+});
+</script>
+
+
+</body></html>
